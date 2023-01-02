@@ -1,4 +1,4 @@
-FROM debian:buster-slim as base
+FROM debian:bullseye-slim as base
 RUN apt-get update && apt-get -y dist-upgrade \
  && apt-get install -y \
     rtl-sdr \
@@ -32,12 +32,16 @@ FROM base
 COPY --from=builder /target/usr/local/bin /usr/local/bin
 COPY --from=builder /target/etc/udev/rules.d/99-direwolf-cmedia.rules /etc/udev/rules.d/99-direwolf-cmedia.rules
 
-ENV CALLSIGN "N0CALL"
-ENV PASSCODE "-1"
+ENV ARATE "48000"
 ENV IGSERVER "noam.aprs2.net"
-ENV FREQUENCY "144.39M"
-ENV COMMENT "Direwolf in Docker w2bro/direwolf"
 ENV SYMBOL "igate"
+ENV COMMENT "Dire Wolf"
+ENV VIA "WIDE1-1"
+ENV RF_DELAY "0:30"
+ENV IG_DELAY "0:30"
+ENV RF_EVERY "60"
+ENV IG_EVERY "60"
+ENV GPSD_HOST "127.0.0.1"
 
 RUN mkdir -p /etc/direwolf
 RUN mkdir -p /var/log/direwolf
