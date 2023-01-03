@@ -3,9 +3,10 @@ RUN apt-get update && apt-get -y dist-upgrade \
  && apt-get install -y \
     rtl-sdr \
     libasound2 \
-    libusb-1.0-0 \
-    libhamlib2 \
-    libgps23 \
+    libasound2-data \
+    libhamlib4 \
+    libgps28 \
+    alsa-utils \
  && rm -rf /var/lib/apt/lists/*
 
 FROM base as builder
@@ -21,6 +22,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN git clone "https://github.com/wb2osz/direwolf.git" /tmp/direwolf \
   && cd /tmp/direwolf \
+  && git checkout 1.6 \
   && mkdir build && cd build \
   && cmake .. \
   && make -j4 \
@@ -30,6 +32,8 @@ RUN git clone "https://github.com/wb2osz/direwolf.git" /tmp/direwolf \
 
 FROM base
 COPY --from=builder /target/usr/local/bin /usr/local/bin
+RUN mkdir /usr/local/share/direwolf
+COPY --from=builder /target/usr/local/share/direwolf /usr/local/share/direwolf
 COPY --from=builder /target/etc/udev/rules.d/99-direwolf-cmedia.rules /etc/udev/rules.d/99-direwolf-cmedia.rules
 
 ENV ARATE "48000"
@@ -45,12 +49,14 @@ ENV GPSD_HOST "127.0.0.1"
 
 RUN mkdir -p /etc/direwolf
 RUN mkdir -p /var/log/direwolf
-RUN addgroup -gid 242 direwolf && adduser -q -uid 242 -gid 242 --no-create-home --disabled-login --gecos "" direwolf 
+RUN addgroup -gid 242 direwolf && adduser -q -uid 242 -gid 242 -gid 29 --no-create-home --disabled-login --gecos "" direwolf 
 COPY start.sh direwolf.conf /etc/direwolf/
 RUN chown 242.242 -R /etc/direwolf
 RUN chown 242.242 -R /var/log/direwolf
+RUN chown 242.242 -R /usr/local/share/direwolf
 
 USER direwolf 
+
 WORKDIR /etc/direwolf
 
 CMD ["/bin/bash", "/etc/direwolf/start.sh"]
