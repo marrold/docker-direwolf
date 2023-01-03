@@ -1,7 +1,25 @@
 #!/bin/bash
 set -e
 
+function direwolf_begin {
+	echo "cat /etc/direwolf/direwolf.conf"
+	cat direwolf.conf
+	echo -e "### EOF ###\n"
+
+	echo -e "Starting Dire Wolf: direwolf $DWARGS -c direwolf.conf\n"
+
+	direwolf $DWARGS -c direwolf.conf
+}
+
 cd /etc/direwolf
+
+if [ -f "direwolf-override.conf" ]; then
+	echo "direwolf-override.conf exists, skipping config generation..."
+	cp direwolf-override.conf direwolf.conf
+	direwolf_begin
+else
+	echo -e "Couldn't find direwolf.conf, generating a new one...\n"
+fi
 
 rm -f direwolf.conf
 
@@ -58,7 +76,7 @@ if [ -n "$CALLSIGN" ]; then
 
 else
 	echo "CALLSIGN is required."
-	exit 2
+	exit 1
 fi
 
 ## APRS-IS Configuration
@@ -113,9 +131,9 @@ if [[ -n "$RF_BEACON" ||  -n "$IG_BEACON" ]]; then
 
 	if [ -n "$RF_BEACON" ]; then
 		if [ -n "$RF_SLOT" ]; then
-			echo "$TYPE slot=$RF_SLOT every=$RF_EVERY $BEACON via=$VIA" >> direwolf.conf
+			echo "$TYPE slot=$RF_SLOT every=$RF_EVERY $BEACON via=\"$VIA\"" >> direwolf.conf
 		else
-			echo "$TYPE delay=$RF_DELAY every=$RF_EVERY $BEACON via=$VIA" >> direwolf.conf
+			echo "$TYPE delay=$RF_DELAY every=$RF_EVERY $BEACON via=\"$VIA\"" >> direwolf.conf
 		fi
 	fi
 
@@ -138,9 +156,4 @@ if [ -n "$ENABLE_DIGI" ]; then
 	EOT
 fi
 
-echo "cat /etc/direwolf/direwolf.conf"
-cat direwolf.conf
-echo -e "\n### EOF ###\n"
-
-direwolf $DWARGS -c direwolf.conf
-
+direwolf_begin
