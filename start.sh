@@ -1,9 +1,15 @@
 #!/bin/bash
 set -e
 
-#cd /etc/direwolf
+cd /etc/direwolf
 
 rm -f direwolf.conf
+
+# Validate audio settings
+if [ -z "$ADEVICE" ]; then
+	echo "ADEVICE is not set"
+        exit 1
+fi
 
 # Validate location settings
 if [ -n "$USE_GPS" ]; then
@@ -100,9 +106,9 @@ if [[ -n "$RF_BEACON" ||  -n "$IG_BEACON" ]]; then
 	fi
 
 	if [ -n "$OVERLAY" ]; then
-		BEACON="symbol=\"$SYMBOL\" overlay=$OVERLAY comment=\"$COMMENT\" $BEACON"
+		BEACON="symbol=\"$SYMBOL\" overlay=$OVERLAY comment=$COMMENT $BEACON"
     else
-		BEACON="symbol=\"$SYMBOL\" comment=\"$COMMENT\" $BEACON"
+		BEACON="symbol=\"$SYMBOL\" comment=$COMMENT $BEACON"
 	fi
 
 	if [ -n "$RF_BEACON" ]; then
@@ -131,6 +137,10 @@ if [ -n "$ENABLE_DIGI" ]; then
 
 	EOT
 fi
+
+echo "cat /etc/direwolf/direwolf.conf"
+cat direwolf.conf
+echo -e "\n### EOF ###\n"
 
 direwolf $DWARGS -c direwolf.conf
 
