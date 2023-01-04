@@ -3,7 +3,7 @@ version: "3.2"
 services:
 
   direwolf:
-    image: oarc-direwolf
+    image: marrold/vpe-direwolf
     container_name: direwolf
     restart: unless-stopped
     ipc: host
@@ -25,7 +25,7 @@ services:
       - GAIN=7
       - COMMENT="Bobs QTH"
   direwolf2:
-    image: oarc-direwolf
+    image: marrold/vpe-direwolf
     container_name: direwolf2
     restart: unless-stopped
     ipc: host
