@@ -1,43 +1,159 @@
 #!/bin/bash
 set -e
 
+function direwolf_begin {
+	echo "cat /etc/direwolf/direwolf.conf"
+	cat direwolf.conf
+	echo -e "### EOF ###\n"
+
+	echo -e "Starting Dire Wolf: direwolf $DWARGS -c direwolf.conf\n"
+
+	direwolf $DWARGS -c direwolf.conf
+}
+
 cd /etc/direwolf
 
-if [ -n "$CALLSIGN" -a  -n "$PASSCODE" ]; then
-  sed -i "s/^MYCALL.*$/MYCALL ${CALLSIGN}/g" direwolf.conf
-  sed -i "s/^IGLOGIN.*$/IGLOGIN ${CALLSIGN} ${PASSCODE}/g" direwolf.conf
+if [ -f "direwolf-override.conf" ]; then
+	echo "direwolf-override.conf exists, skipping config generation..."
+	cp direwolf-override.conf direwolf.conf
+	direwolf_begin
 else
-  echo "CALLSIGN & PASSCODE are required."
-  exit 2
+	echo -e "Couldn't find direwolf.conf, generating a new one...\n"
 fi
 
-## PBEACON line configuration
-if [ -n "$LATITUDE" -a -n "$LONGITUDE" ]; then
-  sed -i "s/%LATITUDE%/${LATITUDE}/g" direwolf.conf
-  sed -i "s/%LONGITUDE%/${LONGITUDE}/g" direwolf.conf
-  sed -i "s/%SYMBOL%/${SYMBOL}/g" direwolf.conf
-  sed -i "s~%COMMENT%~${COMMENT}~g" direwolf.conf
+rm -f direwolf.conf
+
+# Validate audio settings
+if [ -z "$ADEVICE" ]; then
+	echo "ADEVICE is not set"
+        exit 1
+fi
+
+# Validate location settings
+if [ -n "$USE_GPS" ]; then
+	if [ -n "$ENABLE_DIGI" ]; then
+		echo "Digipeating whilst using GPS Beacons is a bad idea."
+		echo "Remove either USE_GPS or ENABLE_DIGI"
+		exit 1
+	fi
+
+	if  [ -n "$LATITUDE" ] && [ -n "$LONGITUDE" ]; then
+			echo "USE_GPS is enabled. Don't set LATITUDE or LONGITUDE"
+			exit 1
+	fi
 else
-  echo "LATITUDE & LONGITUDE are required."
-  exit 3
+	if  [ -z "$LATITUDE" ] && [ -z "$LONGITUDE" ]; then
+			echo "USE_GPS is not enabled. Set LATITUDE and LONGITUDE"
+			exit 1
+	fi
 fi
 
-if [ -n "$ADEVICE" ]; then
-  sed -i "s/^ADEVICE.*$/ADEVICE ${ADEVICE//\//\\/}/g" direwolf.conf
-fi
-
-if [ -n "$IGSERVER" ]; then
-  sed -i "s/^IGSERVER.*$/IGSERVER ${IGSERVER}/g" direwolf.conf
-fi
-
-# Optionally start direwolf without rtl_fm as input
-if [ -n "$DW_STANDALONE" ]; then
-  if [ -n "$ADEVICE" ]; then
-    direwolf $DWARGS -c direwolf.conf
-  else
-    echo "DW_STANDALONE requires ADEVICE also be defined."
-    exit 4
-  fi
+# Validate iGate settings
+if  [ -n "$ENABLE_IG" ]; then
+	if  [ -z "$PASSCODE" ]; then
+		echo "PASSCODE is required if ENABLE_IG is set"
+		exit 1
+	fi
 else
-  rtl_fm -f $FREQUENCY | direwolf $DWARGS -c direwolf.conf
+	if  [ -n "$IG_BEACON" ]; then
+		echo "ENABLE_IG is required to use IG_BEACON"
+		exit 1
+	fi
 fi
+
+## Basic Configuration
+if [ -n "$CALLSIGN" ]; then
+
+	cat <<- EOT >> direwolf.conf
+	#### Base Configuration ####
+
+	MYCALL $CALLSIGN
+	ADEVICE $ADEVICE
+	ARATE $ARATE
+	CHANNEL 0
+
+	EOT
+
+else
+	echo "CALLSIGN is required."
+	exit 1
+fi
+
+## APRS-IS Configuration
+if [ -n "$ENABLE_IG" ] && [ -n "$PASSCODE" ]; then
+
+	cat <<- EOT >> direwolf.conf
+	#### APRS-IS Configuration ####
+
+	IGLOGIN $CALLSIGN $PASSCODE
+	IGSERVER $IG_SERVER
+
+	EOT
+
+fi
+
+## GPSD Configuration 
+if  [ -n "$USE_GPS" ]; then
+	cat <<- EOT >> direwolf.conf
+	#### GPSD Configuration ####
+
+	GPSD $GPSD_HOST
+
+	EOT
+fi
+
+## BEACON Configuration
+if [[ -n "$RF_BEACON" ||  -n "$IG_BEACON" ]]; then
+
+	echo -e "#### Beacon Configuration ####\n" >> direwolf.conf
+
+
+	if [ -z "$USE_GPS" ]; then
+		TYPE="PBEACON"
+		BEACON="lat=$LATITUDE long=$LONGITUDE"
+	else
+		TYPE="TBEACON"
+	fi
+
+	if [ -n "$POWER" ] && [ -n "$HEIGHT" ] && [ -n "$GAIN" ]; then
+		if [ -n "$BEACON" ]; then
+			BEACON="power=$POWER height=$HEIGHT gain=$GAIN $BEACON"
+		else
+			BEACON="power=$POWER height=$HEIGHT gain=$GAIN"
+		fi
+	fi
+
+	if [ -n "$OVERLAY" ]; then
+		BEACON="symbol=\"$SYMBOL\" overlay=$OVERLAY comment=$COMMENT $BEACON"
+    else
+		BEACON="symbol=\"$SYMBOL\" comment=$COMMENT $BEACON"
+	fi
+
+	if [ -n "$RF_BEACON" ]; then
+		if [ -n "$RF_SLOT" ]; then
+			echo "$TYPE slot=$RF_SLOT every=$RF_EVERY $BEACON via=\"$VIA\"" >> direwolf.conf
+		else
+			echo "$TYPE delay=$RF_DELAY every=$RF_EVERY $BEACON via=\"$VIA\"" >> direwolf.conf
+		fi
+	fi
+
+	if [ -n "$IG_BEACON" ]; then
+		echo -e "$TYPE sendto=IG delay=$IG_DELAY every=$IG_EVERY $BEACON" >> direwolf.conf
+	fi
+
+	echo "" >> direwolf.conf
+
+fi
+
+## DIGIPEATER Configuration
+if [ -n "$ENABLE_DIGI" ]; then
+	cat <<- EOT >> direwolf.conf
+	#### Digipeater Configuration ####
+
+	DIGIPEAT 0 0 ^WIDE[3-7]-[1-7]$ ^WIDE[12]-[12]$ TRACE
+	FILTER 0 0 ! d/$CALLSIGN
+
+	EOT
+fi
+
+direwolf_begin

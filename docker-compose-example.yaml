@@ -1,0 +1,48 @@
+version: "3.2"
+
+services:
+
+  direwolf:
+    image: oarc-direwolf
+    container_name: direwolf
+    restart: unless-stopped
+    ipc: host
+    devices:
+      - /dev/snd
+    volumes:
+      - /etc/asound.conf:/etc/asound.conf
+    environment:
+      - ADEVICE=zone_f
+      - CALLSIGN=QE0ABC-1
+      - LATITUDE=50.000000
+      - LONGITUDE=2.000000
+      - RF_BEACON=YES
+      - RF_EVERY=1
+      - RF_DELAY=0:10
+      - SYMBOL=digi
+      - HEIGHT=10
+      - POWER=5
+      - GAIN=7
+      - COMMENT="Bobs QTH"
+  direwolf2:
+    image: oarc-direwolf
+    container_name: direwolf2
+    restart: unless-stopped
+    ipc: host
+    devices:
+      - /dev/snd
+    volumes:
+      - /etc/asound.conf:/etc/asound.conf
+    environment:
+      - ADEVICE=zone_f
+      - CALLSIGN=QE0ABC-2
+      - LATITUDE=50.000000
+      - LONGITUDE=2.000000
+      - RF_BEACON=YES
+      - RF_EVERY=1
+      - RF_DELAY=0:30
+      - SYMBOL=digi
+      - HEIGHT=10
+      - POWER=5
+      - GAIN=7
+      - COMMENT="RADIO HQ"
