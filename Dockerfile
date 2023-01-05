@@ -50,7 +50,7 @@ ENV GPSD_HOST "127.0.0.1"
 RUN mkdir -p /etc/direwolf
 RUN mkdir -p /var/log/direwolf
 RUN addgroup -gid 242 direwolf && adduser -q -uid 242 -gid 242 -gid 29 --no-create-home --disabled-login --gecos "" direwolf 
-COPY start.sh direwolf.conf /etc/direwolf/
+COPY start.sh /etc/direwolf/
 RUN chown 242.242 -R /etc/direwolf
 RUN chown 242.242 -R /var/log/direwolf
 RUN chown 242.242 -R /usr/local/share/direwolf
