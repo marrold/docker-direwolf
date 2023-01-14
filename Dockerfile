@@ -7,6 +7,7 @@ RUN apt-get update && apt-get -y dist-upgrade \
     libhamlib4 \
     libgps28 \
     alsa-utils \
+    libudev-dev \
  && rm -rf /var/lib/apt/lists/*
 
 FROM base as builder

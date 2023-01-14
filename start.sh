@@ -23,6 +23,12 @@ fi
 
 rm -f direwolf.conf
 
+# Validate callsign
+if [ -z "$CALLSIGN" ]; then
+	echo "CALLSIGN is not set"
+        exit 1
+fi
+
 # Validate audio settings
 if [ -z "$ADEVICE" ]; then
 	echo "ADEVICE is not set"
@@ -62,21 +68,21 @@ else
 fi
 
 ## Basic Configuration
-if [ -n "$CALLSIGN" ]; then
 
-	cat <<- EOT >> direwolf.conf
-	#### Base Configuration ####
+cat <<- EOT >> direwolf.conf
+#### Base Configuration ####
 
-	MYCALL $CALLSIGN
-	ADEVICE $ADEVICE
-	ARATE $ARATE
-	CHANNEL 0
+MYCALL $CALLSIGN
+ADEVICE $ADEVICE
+ARATE $ARATE
+CHANNEL 0
+EOT
 
-	EOT
-
+if [ -n "$PTT" ]; then
+	echo "PTT $PTT" >> direwolf.conf
+	echo "" >> direwolf.conf
 else
-	echo "CALLSIGN is required."
-	exit 1
+	echo "" >> direwolf.conf
 fi
 
 ## APRS-IS Configuration
